@@ -6,28 +6,84 @@ import {
   StyleSheet, 
   TouchableOpacity, 
   SafeAreaView,
-  StatusBar
+  StatusBar,
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 
 export default function LoginScreen({ navigation }) {
   const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const doLogin = () => {
-    if (!phone) {
-      alert("Nomor Handphone wajib diisi");
-      return;
-    }
-    if (!password) {
-      alert("Password wajib diisi");
-      return;
-    }
-    
-    // Dummy login - navigasi ke halaman toko
-    navigation.replace("Home");
+  const generateOTP = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
   };
+
+const sendOTP = async () => {
+  if (!phone) {
+    Alert.alert("Error", "Nomor Handphone wajib diisi");
+    return;
+  }
+
+  if (phone.length < 10) {
+    Alert.alert("Error", "Nomor Handphone tidak valid");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const otp = generateOTP();
+
+    // Normalisasi nomor
+    let formattedPhone = phone
+      .replace(/\D/g, "")
+      .replace(/^0/, "62")
+      .replace(/^(?!62)/, "62");
+
+    console.log("Nomor yang dikirim:", formattedPhone);
+
+    const response = await fetch("https://api.fonnte.com/send", {
+      method: "POST",
+      headers: {
+        Authorization: "ScSuD6CbrZakniT79zut",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        target: formattedPhone,
+        message: `Kode OTP Anda adalah: *${otp}*\n\nJangan bagikan kode ini kepada siapapun.\n\nBerlaku selama 5 menit.`,
+        countryCode: "62",
+      }),
+    });
+
+    const result = await response.json();
+    console.log("Response Fonnte:", result);
+
+    if (result.status === true) {
+      // Tampilkan alert dulu
+   
+      // Delay sebentar biar alert sempat tampil
+      setTimeout(() => {
+        navigation.navigate("VerifyOTPScreen", {
+          phone: formattedPhone,
+          otp,
+          originalPhone: phone,
+        });
+      }, 500);
+      
+    } else {
+      Alert.alert("Gagal Mengirim OTP", result.reason || "Periksa nomor Anda");
+    }
+  } catch (error) {
+    console.error("Error sending OTP:", error);
+    Alert.alert("Error", "Terjadi kesalahan saat mengirim OTP");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -47,56 +103,58 @@ export default function LoginScreen({ navigation }) {
 
       {/* Content */}
       <View style={styles.content}>
-        {/* Phone Input */}
-        <Text style={styles.label}>Nomor Handphone</Text>
-        <TextInput
-          placeholder="082343243243243"
-          value={phone}
-          onChangeText={setPhone}
-          style={styles.input}
-          keyboardType="phone-pad"
-          maxLength={15}
-        />
-
-        {/* Password Input */}
-        <Text style={styles.label}>Password</Text>
-        <View style={styles.passwordContainer}>
-          <TextInput
-            placeholder="••••••"
-            value={password}
-            onChangeText={setPassword}
-            style={styles.passwordInput}
-            secureTextEntry={!showPassword}
-          />
-          <TouchableOpacity 
-            onPress={() => setShowPassword(!showPassword)}
-            style={styles.eyeIcon}
-          >
-            <Icon 
-              name={showPassword ? "eye-outline" : "eye-off-outline"} 
-              size={24} 
-              color="#999" 
-            />
-          </TouchableOpacity>
+        <View style={styles.infoBox}>
+          <Icon name="shield-checkmark" size={24} color="#00BCD4" />
+          <Text style={styles.infoText}>
+            Kami akan mengirimkan kode verifikasi ke WhatsApp Anda
+          </Text>
         </View>
 
-        {/* Forgot Password */}
-        <TouchableOpacity style={styles.forgotPassword}>
-          <Text style={styles.forgotPasswordText}>Lupa Password?</Text>
-        </TouchableOpacity>
+        {/* Phone Input */}
+        <Text style={styles.label}>Nomor Handphone</Text>
+        <View style={styles.phoneInputContainer}>
+          <View style={styles.countryCode}>
+            <Text style={styles.countryCodeText}>+62</Text>
+          </View>
+          <TextInput
+            placeholder="8123456789"
+            value={phone}
+            onChangeText={(text) => {
+              // Remove non-numeric characters
+              const cleaned = text.replace(/[^0-9]/g, '');
+              setPhone(cleaned);
+            }}
+            style={styles.phoneInput}
+            keyboardType="phone-pad"
+            maxLength={15}
+            editable={!loading}
+          />
+        </View>
+
+        <Text style={styles.helpText}>
+          Contoh: 812345678910 (tanpa 0 di depan)
+        </Text>
 
         {/* Login Button */}
         <TouchableOpacity 
-          style={styles.btn} 
-          onPress={doLogin}
+          style={[styles.btn, loading && styles.btnDisabled]} 
+          onPress={sendOTP}
+          disabled={loading}
         >
-          <Text style={styles.btnText}>Masuk</Text>
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.btnText}>Kirim Kode OTP</Text>
+          )}
         </TouchableOpacity>
 
         {/* Register Link */}
         <View style={styles.registerContainer}>
           <Text style={styles.registerText}>Belum Punya Akun? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate("RegisterScreen")}>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate("RegisterScreen")}
+            disabled={loading}
+          >
             <Text style={styles.registerLink}>Daftar Disini</Text>
           </TouchableOpacity>
         </View>
@@ -130,50 +188,59 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 30
   },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E0F7FA',
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 25
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#00695C',
+    marginLeft: 12,
+    lineHeight: 18
+  },
   label: {
     fontSize: 15,
     color: '#000',
     marginBottom: 12,
-    marginTop: 15,
     fontWeight: '500'
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 25,
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    fontSize: 15,
-    color: '#000',
-    backgroundColor: '#FAFAFA'
-  },
-  passwordContainer: {
+  phoneInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E0E0E0',
     borderRadius: 25,
-    paddingHorizontal: 20,
-    backgroundColor: '#FAFAFA'
+    backgroundColor: '#FAFAFA',
+    paddingLeft: 20,
+    paddingRight: 20,
   },
-  passwordInput: {
+  countryCode: {
+    paddingRight: 10,
+    borderRightWidth: 1,
+    borderRightColor: '#E0E0E0',
+    marginRight: 10
+  },
+  countryCodeText: {
+    fontSize: 15,
+    color: '#000',
+    fontWeight: '600'
+  },
+  phoneInput: {
     flex: 1,
     paddingVertical: 15,
     fontSize: 15,
     color: '#000'
   },
-  eyeIcon: {
-    padding: 5
-  },
-  forgotPassword: {
-    alignSelf: 'flex-start',
-    marginTop: 15,
-    marginBottom: 25
-  },
-  forgotPasswordText: {
-    fontSize: 14,
-    color: '#000',
-    fontWeight: '500'
+  helpText: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 8,
+    marginLeft: 5
   },
   btn: { 
     backgroundColor: '#00BCD4', 
@@ -184,7 +251,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
-    marginTop: 10
+    marginTop: 30
+  },
+  btnDisabled: {
+    backgroundColor: '#80DEEA',
+    opacity: 0.7
   },
   btnText: { 
     color: 'white', 

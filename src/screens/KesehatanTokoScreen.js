@@ -6,14 +6,32 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  Modal,
 } from 'react-native';
 import { LineChart, PieChart } from 'react-native-gifted-charts';
 import Icon from 'react-native-vector-icons/Ionicons';
 
 const { width } = Dimensions.get('window');
 
-export default function KesehatanTokoScreen() {
+// Color Palette
+const COLORS = {
+  primary: '#2196F3',
+  success: '#4CAF50',
+  danger: '#F44336',
+  warning: '#FF9800',
+  dark: '#1A1A1A',
+  text: '#333333',
+  textLight: '#666666',
+  textMuted: '#999999',
+  background: '#F5F7FA',
+  white: '#FFFFFF',
+  border: '#E5E5E5',
+  divider: '#F0F0F0',
+};
+
+export default function KesehatanTokoScreen({ navigation }) {
   const [selectedPeriod, setSelectedPeriod] = useState('30D');
+  const [showClaimModal, setShowClaimModal] = useState(false);
 
   // Data untuk cards
   const summaryCards = [
@@ -73,225 +91,379 @@ export default function KesehatanTokoScreen() {
 
   // Status Pengiriman & Klaim
   const statusData = [
-    { name: 'Barang Hilang', amount: 'Rp 1.000', status: 'Dianggap' },
-    { name: 'Barang Retur', amount: 'Rp 3.000', status: 'Proses' },
-    { name: 'Selisih Ongkir', amount: 'Rp 1.000', status: 'Pending' },
+    { name: 'Barang Hilang', amount: '3', status: 'Rp 100.000' },
+    { name: 'Barang Retur', amount: '4', status: 'Rp 150.000' },
+    { name: 'Selisih Ongkir', amount: '3', status: 'Rp 390.000' },
   ];
 
+  // Detail Reports Data
+  const detailReports = [
+    { 
+      id: 1, 
+      title: 'Barang Belum Sampai', 
+      icon: 'time-outline', 
+      color: COLORS.warning,
+      count: '12 Paket'
+    },
+    { 
+      id: 2, 
+      title: 'Barang Sudah Cair', 
+      icon: 'checkmark-circle-outline', 
+      color: COLORS.success,
+      count: '145 Paket'
+    },
+    { 
+      id: 3, 
+      title: 'Barang Hilang', 
+      icon: 'alert-circle-outline', 
+      color: COLORS.danger,
+      count: '3 Paket'
+    },
+    { 
+      id: 4, 
+      title: 'Selisih Ongkir', 
+      icon: 'cash-outline', 
+      color: COLORS.primary,
+      count: 'Rp 390.000'
+    },
+    { 
+      id: 5, 
+      title: 'Laporan Keuangan', 
+      icon: 'document-text-outline', 
+      color: COLORS.primary,
+      count: 'Lihat Detail'
+    },
+    { 
+      id: 6, 
+      title: 'Omset Harian', 
+      icon: 'trending-up-outline', 
+      color: COLORS.success,
+      count: 'Lihat Grafik'
+    },
+  ];
+
+  const claimOptions = [
+    {
+      id: 1,
+      title: 'Klaim Paket Hilang',
+      description: 'Ajukan klaim untuk paket yang hilang atau tidak sampai',
+      icon: 'cube-outline',
+      color: COLORS.danger,
+      type: 'paket_hilang'
+    },
+    {
+      id: 2,
+      title: 'Klaim Selisih Ongkir',
+      description: 'Ajukan klaim untuk selisih biaya pengiriman',
+      icon: 'cash-outline',
+      color: COLORS.primary,
+      type: 'selisih_ongkir'
+    },
+  ];
+
+  const handleClaimSelect = (type) => {
+    setShowClaimModal(false);
+    // Navigate to form klaim screen
+    navigation.navigate('FormKlaimScreen', { claimType: type });
+  };
+
+  const handleDetailReport = (reportTitle) => {
+    // Navigate to detail report screen
+    navigation.navigate('DetailReportScreen', { reportType: reportTitle });
+  };
+
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn}>
-          <Icon name="arrow-back" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Kesehatan Toko</Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <View style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+            <Icon name="arrow-back" size={24} color={COLORS.text} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Kesehatan Toko</Text>
+          <View style={{ width: 24 }} />
+        </View>
 
-      {/* Summary Cards */}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        style={styles.cardsScroll}
-      >
-        {summaryCards.map((card, index) => (
-          <View 
-            key={index} 
-            style={[styles.summaryCard, { backgroundColor: card.color }]}
-          >
-            <Text style={styles.cardLabel}>{card.label}</Text>
-            <Text style={[styles.cardValue, { color: card.textColor }]}>
-              {card.value}
-            </Text>
+        {/* Summary Cards */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.cardsScroll}
+        >
+          {summaryCards.map((card, index) => (
+            <View 
+              key={index} 
+              style={[styles.summaryCard, { backgroundColor: card.color }]}
+            >
+              <Text style={styles.cardLabel}>{card.label}</Text>
+              <Text style={[styles.cardValue, { color: card.textColor }]}>
+                {card.value}
+              </Text>
+            </View>
+          ))}
+        </ScrollView>
+
+        {/* Omzet dan Biaya Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Omzet dan Biaya</Text>
+            <View style={styles.periodButtons}>
+              {['7D', '30D', 'MTD'].map((period) => (
+                <TouchableOpacity
+                  key={period}
+                  style={[
+                    styles.periodBtn,
+                    selectedPeriod === period && styles.periodBtnActive
+                  ]}
+                  onPress={() => setSelectedPeriod(period)}
+                >
+                  <Text style={[
+                    styles.periodText,
+                    selectedPeriod === period && styles.periodTextActive
+                  ]}>
+                    {period}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        ))}
-      </ScrollView>
 
-      {/* Omzet dan Biaya Section */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Omzet dan Biaya</Text>
-          <View style={styles.periodButtons}>
-            {['7D', '30D', 'MTD'].map((period) => (
-              <TouchableOpacity
-                key={period}
-                style={[
-                  styles.periodBtn,
-                  selectedPeriod === period && styles.periodBtnActive
-                ]}
-                onPress={() => setSelectedPeriod(period)}
+          {/* Line Chart */}
+          <View style={styles.chartContainer}>
+            <LineChart
+              data={omzetData}
+              data2={biayaData}
+              height={180}
+              width={width - 60}
+              spacing={40}
+              initialSpacing={10}
+              color1="#4A90E2"
+              color2="#F5A623"
+              thickness={3}
+              curved
+              startFillColor1="rgba(74, 144, 226, 0.2)"
+              endFillColor1="rgba(74, 144, 226, 0.05)"
+              startFillColor2="rgba(245, 166, 35, 0.2)"
+              endFillColor2="rgba(245, 166, 35, 0.05)"
+              areaChart
+              hideDataPoints={false}
+              dataPointsColor1="#4A90E2"
+              dataPointsColor2="#F5A623"
+              dataPointsRadius={4}
+              xAxisColor="#E0E0E0"
+              yAxisColor="#E0E0E0"
+              yAxisTextStyle={{ color: '#888', fontSize: 10 }}
+              xAxisLabelTextStyle={{ color: '#888', fontSize: 9 }}
+              noOfSections={4}
+              maxValue={100}
+            />
+            
+            {/* Legend */}
+            <View style={styles.legend}>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: '#4A90E2' }]} />
+                <Text style={styles.legendText}>Omzet</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: '#F5A623' }]} />
+                <Text style={styles.legendText}>Biaya</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Pengeluaran Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Pengeluaran</Text>
+          
+          <View style={styles.pengeluaranContainer}>
+            {/* Pie Chart */}
+            <View style={styles.pieChartContainer}>
+              <PieChart
+                data={pieData}
+                radius={70}
+                innerRadius={45}
+                centerLabelComponent={() => (
+                  <View style={styles.centerLabel}>
+                    <Text style={styles.centerLabelText}>Total</Text>
+                    <Text style={styles.centerLabelValue}>100%</Text>
+                  </View>
+                )}
+              />
+            </View>
+
+            {/* Pengeluaran Details */}
+            <View style={styles.pengeluaranDetails}>
+              <View style={styles.detailHeader}>
+                <Text style={styles.detailHeaderText}>Nama</Text>
+                <Text style={styles.detailHeaderText}>Persentage</Text>
+              </View>
+              {pengeluaranDetail.map((item, index) => (
+                <View key={index} style={styles.detailRow}>
+                  <Text style={styles.detailName}>{item.name}</Text>
+                  <Text style={styles.detailPercentage}>{item.percentage}</Text>
+                </View>
+              ))}
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Total Biaya</Text>
+                <Text style={styles.totalValue}>Rp 38.000.000</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Pengeluaran Amounts */}
+          <View style={styles.amountsContainer}>
+            <View style={styles.amountHeader}>
+              <Text style={styles.amountHeaderText}>Nama</Text>
+              <Text style={styles.amountHeaderText}>Rp</Text>
+            </View>
+            {pengeluaranDetail.map((item, index) => (
+              <View key={index} style={styles.amountRow}>
+                <Text style={styles.amountName}>{item.name}</Text>
+                <Text style={styles.amountValue}>{item.amount}</Text>
+              </View>
+            ))}
+            <View style={styles.totalAmountRow}>
+              <Text style={styles.totalAmountLabel}>Total Biaya</Text>
+              <Text style={styles.totalAmountValue}>Rp 38.000.000</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Uang Cair vs Pending */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Uang Cair vs Pending</Text>
+          
+          <View style={styles.barChartContainer}>
+            <View style={styles.barChart}>
+              {barData.map((item, index) => (
+                <View key={index} style={styles.barItem}>
+                  <View style={styles.barWrapper}>
+                    <View 
+                      style={[
+                        styles.bar, 
+                        { 
+                          height: `${item.value}%`, 
+                          backgroundColor: item.frontColor 
+                        }
+                      ]} 
+                    />
+                  </View>
+                  <Text style={styles.barLabel}>{item.label}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+
+        {/* Status Pengiriman & Klaim */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Status Pengiriman & Klaim</Text>
+          
+          <View style={styles.tableContainer}>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableHeaderText, { flex: 1.5 }]}>Nama</Text>
+              <Text style={[styles.tableHeaderText, { flex: 1 }]}>Total Barang</Text>
+              <Text style={[styles.tableHeaderText, { flex: 1 }]}>Total Kerugian</Text>
+            </View>
+            
+            {statusData.map((item, index) => (
+              <View key={index} style={styles.tableRow}>
+                <Text style={[styles.tableCell, { flex: 1.5 }]}>{item.name}</Text>
+                <Text style={[styles.tableCell, { flex: 1 }]}>{item.amount}</Text>
+                <Text style={[styles.tableCell, { flex: 1 }]}>{item.status}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Detail Reports Grid */}
+        {/* <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Lihat Selengkapnya</Text>
+          
+          <View style={styles.reportGrid}>
+            {detailReports.map((report) => (
+              <TouchableOpacity 
+                key={report.id} 
+                style={styles.reportCard}
+                onPress={() => handleDetailReport(report.title)}
+                activeOpacity={0.7}
               >
-                <Text style={[
-                  styles.periodText,
-                  selectedPeriod === period && styles.periodTextActive
-                ]}>
-                  {period}
-                </Text>
+                <View style={[styles.reportIconWrapper, { backgroundColor: report.color + '15' }]}>
+                  <Icon name={report.icon} size={24} color={report.color} />
+                </View>
+                <Text style={styles.reportTitle}>{report.title}</Text>
+                <Text style={styles.reportCount}>{report.count}</Text>
+                <Icon name="chevron-forward" size={18} color={COLORS.textMuted} style={styles.reportChevron} />
               </TouchableOpacity>
             ))}
           </View>
-        </View>
+        </View> */}
 
-        {/* Line Chart */}
-        <View style={styles.chartContainer}>
-          <LineChart
-            data={omzetData}
-            data2={biayaData}
-            height={180}
-            width={width - 60}
-            spacing={40}
-            initialSpacing={10}
-            color1="#4A90E2"
-            color2="#F5A623"
-            thickness={3}
-            curved
-            startFillColor1="rgba(74, 144, 226, 0.2)"
-            endFillColor1="rgba(74, 144, 226, 0.05)"
-            startFillColor2="rgba(245, 166, 35, 0.2)"
-            endFillColor2="rgba(245, 166, 35, 0.05)"
-            areaChart
-            hideDataPoints={false}
-            dataPointsColor1="#4A90E2"
-            dataPointsColor2="#F5A623"
-            dataPointsRadius={4}
-            xAxisColor="#E0E0E0"
-            yAxisColor="#E0E0E0"
-            yAxisTextStyle={{ color: '#888', fontSize: 10 }}
-            xAxisLabelTextStyle={{ color: '#888', fontSize: 9 }}
-            noOfSections={4}
-            maxValue={100}
-          />
-          
-          {/* Legend */}
-          <View style={styles.legend}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#4A90E2' }]} />
-              <Text style={styles.legendText}>Omzet</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#F5A623' }]} />
-              <Text style={styles.legendText}>Biaya</Text>
-            </View>
-          </View>
-        </View>
-      </View>
+        {/* Bottom Spacing */}
+        <View style={{ height: 100 }} />
+      </ScrollView>
 
-      {/* Pengeluaran Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Pengeluaran</Text>
-        
-        <View style={styles.pengeluaranContainer}>
-          {/* Pie Chart */}
-          <View style={styles.pieChartContainer}>
-            <PieChart
-              data={pieData}
-              radius={70}
-              innerRadius={45}
-              centerLabelComponent={() => (
-                <View style={styles.centerLabel}>
-                  <Text style={styles.centerLabelText}>Total</Text>
-                  <Text style={styles.centerLabelValue}>100%</Text>
-                </View>
-              )}
-            />
-          </View>
+      {/* Floating Action Button - Ajukan Klaim */}
+      <TouchableOpacity 
+        style={styles.fabButton}
+        onPress={() => setShowClaimModal(true)}
+        activeOpacity={0.9}
+      >
+        <Icon name="document-text" size={24} color={COLORS.white} />
+        <Text style={styles.fabText}>Ajukan Klaim</Text>
+      </TouchableOpacity>
 
-          {/* Pengeluaran Details */}
-          <View style={styles.pengeluaranDetails}>
-            <View style={styles.detailHeader}>
-              <Text style={styles.detailHeaderText}>Petengikuma</Text>
-              <Text style={styles.detailHeaderText}>Persentage</Text>
+      {/* Modal Pilihan Klaim */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showClaimModal}
+        onRequestClose={() => setShowClaimModal(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowClaimModal(false)}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Pilih Jenis Klaim</Text>
+              <TouchableOpacity onPress={() => setShowClaimModal(false)}>
+                <Icon name="close-circle" size={28} color={COLORS.textLight} />
+              </TouchableOpacity>
             </View>
-            {pengeluaranDetail.map((item, index) => (
-              <View key={index} style={styles.detailRow}>
-                <Text style={styles.detailName}>{item.name}</Text>
-                <Text style={styles.detailPercentage}>{item.percentage}</Text>
-              </View>
-            ))}
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Total Biaya</Text>
-              <Text style={styles.totalValue}>Rp 38.000.000</Text>
+
+            <View style={styles.modalBody}>
+              {claimOptions.map((option) => (
+                <TouchableOpacity 
+                  key={option.id}
+                  style={styles.claimOption}
+                  onPress={() => handleClaimSelect(option.type)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.claimIconWrapper, { backgroundColor: option.color + '15' }]}>
+                    <Icon name={option.icon} size={28} color={option.color} />
+                  </View>
+                  <View style={styles.claimInfo}>
+                    <Text style={styles.claimTitle}>{option.title}</Text>
+                    <Text style={styles.claimDescription}>{option.description}</Text>
+                  </View>
+                  <Icon name="chevron-forward" size={24} color={COLORS.textMuted} />
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
-        </View>
-
-        {/* Pengeluaran Amounts */}
-        <View style={styles.amountsContainer}>
-          <View style={styles.amountHeader}>
-            <Text style={styles.amountHeaderText}>Petengikuma</Text>
-            <Text style={styles.amountHeaderText}>Rp</Text>
-          </View>
-          {pengeluaranDetail.map((item, index) => (
-            <View key={index} style={styles.amountRow}>
-              <Text style={styles.amountName}>{item.name}</Text>
-              <Text style={styles.amountValue}>{item.amount}</Text>
-            </View>
-          ))}
-          <View style={styles.totalAmountRow}>
-            <Text style={styles.totalAmountLabel}>Total Biaya</Text>
-            <Text style={styles.totalAmountValue}>Rp 38.000.000</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Uang Cair vs Pending */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Uang Cair vs Pending</Text>
-        
-        <View style={styles.barChartContainer}>
-          <View style={styles.barChart}>
-            {barData.map((item, index) => (
-              <View key={index} style={styles.barItem}>
-                <View style={styles.barWrapper}>
-                  <View 
-                    style={[
-                      styles.bar, 
-                      { 
-                        height: `${item.value}%`, 
-                        backgroundColor: item.frontColor 
-                      }
-                    ]} 
-                  />
-                </View>
-                <Text style={styles.barLabel}>{item.label}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      </View>
-
-      {/* Status Pengiriman & Klaim */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Status Pengiriman & Klaim</Text>
-        
-        <View style={styles.tableContainer}>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderText, { flex: 1.5 }]}>Harang-kos</Text>
-            <Text style={[styles.tableHeaderText, { flex: 1 }]}>Total Ratulia</Text>
-            <Text style={[styles.tableHeaderText, { flex: 1 }]}>T'stu</Text>
-          </View>
-          
-          {statusData.map((item, index) => (
-            <View key={index} style={styles.tableRow}>
-              <Text style={[styles.tableCell, { flex: 1.5 }]}>{item.name}</Text>
-              <Text style={[styles.tableCell, { flex: 1 }]}>{item.amount}</Text>
-              <Text style={[styles.tableCell, { flex: 1 }]}>{item.status}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-
-      {/* Bottom Spacing */}
-      <View style={{ height: 30 }} />
-    </ScrollView>
+        </TouchableOpacity>
+      </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: COLORS.background,
   },
   header: {
     flexDirection: 'row',
@@ -299,9 +471,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     paddingTop: 50,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: COLORS.divider,
   },
   backBtn: {
     padding: 4,
@@ -309,7 +481,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#000',
+    color: COLORS.text,
   },
 
   // Summary Cards
@@ -330,7 +502,7 @@ const styles = StyleSheet.create({
   },
   cardLabel: {
     fontSize: 11,
-    color: '#666',
+    color: COLORS.textLight,
     marginBottom: 8,
   },
   cardValue: {
@@ -341,7 +513,7 @@ const styles = StyleSheet.create({
 
   // Section
   section: {
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.white,
     marginHorizontal: 15,
     marginBottom: 15,
     padding: 15,
@@ -362,7 +534,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#000',
+    color: COLORS.text,
     marginBottom: 10,
   },
   periodButtons: {
@@ -373,18 +545,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 16,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: COLORS.background,
   },
   periodBtnActive: {
-    backgroundColor: '#4A90E2',
+    backgroundColor: COLORS.primary,
   },
   periodText: {
     fontSize: 11,
-    color: '#666',
+    color: COLORS.textLight,
     fontWeight: '600',
   },
   periodTextActive: {
-    color: '#fff',
+    color: COLORS.white,
   },
 
   // Chart Container
@@ -409,7 +581,7 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 12,
-    color: '#666',
+    color: COLORS.textLight,
     fontWeight: '500',
   },
 
@@ -428,12 +600,12 @@ const styles = StyleSheet.create({
   },
   centerLabelText: {
     fontSize: 10,
-    color: '#666',
+    color: COLORS.textLight,
   },
   centerLabelValue: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#000',
+    color: COLORS.text,
   },
   pengeluaranDetails: {
     flex: 1,
@@ -444,11 +616,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingBottom: 6,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: COLORS.divider,
   },
   detailHeaderText: {
     fontSize: 10,
-    color: '#999',
+    color: COLORS.textMuted,
     fontWeight: '600',
   },
   detailRow: {
@@ -458,13 +630,13 @@ const styles = StyleSheet.create({
   },
   detailName: {
     fontSize: 11,
-    color: '#333',
+    color: COLORS.text,
     flex: 1,
     paddingRight: 10,
   },
   detailPercentage: {
     fontSize: 11,
-    color: '#666',
+    color: COLORS.textLight,
     fontWeight: '600',
   },
   totalRow: {
@@ -473,17 +645,17 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: COLORS.divider,
   },
   totalLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#000',
+    color: COLORS.text,
   },
   totalValue: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#000',
+    color: COLORS.text,
   },
 
   // Amounts Container
@@ -491,7 +663,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: COLORS.divider,
   },
   amountHeader: {
     flexDirection: 'row',
@@ -499,11 +671,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingBottom: 6,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: COLORS.divider,
   },
   amountHeaderText: {
     fontSize: 10,
-    color: '#999',
+    color: COLORS.textMuted,
     fontWeight: '600',
   },
   amountRow: {
@@ -513,13 +685,13 @@ const styles = StyleSheet.create({
   },
   amountName: {
     fontSize: 11,
-    color: '#333',
+    color: COLORS.text,
     flex: 1,
     paddingRight: 10,
   },
   amountValue: {
     fontSize: 11,
-    color: '#666',
+    color: COLORS.textLight,
     fontWeight: '600',
   },
   totalAmountRow: {
@@ -528,17 +700,17 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: COLORS.divider,
   },
   totalAmountLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#000',
+    color: COLORS.text,
   },
   totalAmountValue: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#4CAF50',
+    color: COLORS.success,
   },
 
   // Bar Chart
@@ -558,7 +730,7 @@ const styles = StyleSheet.create({
   barWrapper: {
     height: 160,
     width: 50,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: COLORS.background,
     borderRadius: 8,
     overflow: 'hidden',
     justifyContent: 'flex-end',
@@ -570,7 +742,7 @@ const styles = StyleSheet.create({
   barLabel: {
     marginTop: 8,
     fontSize: 11,
-    color: '#333',
+    color: COLORS.text,
     fontWeight: '600',
     textAlign: 'center',
   },
@@ -583,12 +755,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingVertical: 8,
     borderBottomWidth: 2,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: COLORS.divider,
   },
   tableHeaderText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#666',
+    color: COLORS.textLight,
   },
   tableRow: {
     flexDirection: 'row',
@@ -598,6 +770,126 @@ const styles = StyleSheet.create({
   },
   tableCell: {
     fontSize: 12,
-    color: '#333',
+    color: COLORS.text,
+  },
+
+  // Report Grid
+  reportGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  reportCard: {
+    width: (width - 50) / 2,
+    backgroundColor: COLORS.background,
+    padding: 15,
+    borderRadius: 12,
+    position: 'relative',
+  },
+  reportIconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  reportTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  reportCount: {
+    fontSize: 11,
+    color: COLORS.textLight,
+  },
+  reportChevron: {
+    position: 'absolute',
+    top: 15,
+    right: 15,
+  },
+
+  // FAB Button
+  fabButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    backgroundColor: COLORS.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    gap: 8,
+  },
+  fabText: {
+    color: COLORS.white,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 30,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  modalBody: {
+    padding: 20,
+    gap: 12,
+  },
+  claimOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    padding: 15,
+    borderRadius: 12,
+    gap: 12,
+  },
+  claimIconWrapper: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  claimInfo: {
+    flex: 1,
+  },
+  claimTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  claimDescription: {
+    fontSize: 12,
+    color: COLORS.textLight,
+    lineHeight: 16,
   },
 });

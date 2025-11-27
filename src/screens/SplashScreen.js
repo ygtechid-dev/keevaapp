@@ -1,12 +1,37 @@
 import React, { useEffect } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, Image } from 'react-native';
 import IMGsrc from '../assets/keeva.png';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 export default function SplashScreen({ navigation }) {
-  useEffect(() => {
-    setTimeout(() => {
+useEffect(() => {
+  const init = async () => {
+    try {
+      const tokenlaz = await AsyncStorage.getItem('lazada_token');
+
+      console.log('==========================xx==========');
+
+      if (tokenlaz) {
+        const parsed = JSON.parse(tokenlaz);
+        console.log('toklazz', parsed);
+
+        // kalau ada token, masuk ke home
+        navigation.replace("Home");
+      } else {
+        // kalau tidak ada token, ke login
+        navigation.replace("Login");
+      }
+
+    } catch (error) {
+      console.log("Error load token", error);
       navigation.replace("Login");
-    }, 1500);
-  }, []);
+    }
+  };
+
+  // panggil fungsi
+  init();
+
+}, []);
+
 
   return (
     <View style={styles.container}>
